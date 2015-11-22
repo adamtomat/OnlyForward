@@ -2,9 +2,7 @@
 WordPress plugin that allows browsers to show a Flash Of Unstyled Text (FOUT) when using web fonts.
 
 ## Setup
-1. Load your fonts however ever you would normally (e.g. `<link>` or Google Font Loader etc).
-2. Install & activate the plugin
-3. Tell the plugin what font families to listen for:
+Install & activate the plugin, then tell the plugin what font families to listen for:
 
 ````php
 <?php // functions.php
@@ -26,6 +24,17 @@ body {
 .fonts-loaded body {
     font-family: 'PT Serif, Georgia, serif';
 }
+````
+
+### More Configuration
+
+The `init` function also take 2 additional arguments that lets you control the cookie that is created to know when fonts are loaded. If you wanted to change the cookie name to `_fonts_cached_in_browser` and make it last 30 days you could do the following:
+
+````php
+<?php // functions.php
+
+Rareloop\FontFout::init(['PT Serif'], '_fonts_cached_in_browser', 60 * 60 * 24 * 30);
+
 ````
 
 ## Optimising for future page views

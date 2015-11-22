@@ -5,15 +5,24 @@ namespace Rareloop;
 class FontFout
 {
     public static $fontsLoaded = false;
+
     public static $fontFamilies;
+    public static $cookieName;
+    public static $cookieDuration;
 
     /**
      * Instantiates the plugin
      */
-    public static function init($fontFamilies = [])
+    public static function init($fontFamilies = [], $cookieName = 'fonts-loaded', $cookieDuration = 86400)
     {
+        // Setup the static variables we need
         self::$fontFamilies = $fontFamilies;
+        self::$cookieName = $cookieName;
 
+        // Google Font's serves fonts with an expiration of 1 day (our default)
+        self::$cookieDuration = $cookieDuration;
+
+        // Hook into the footer action so that we can inject some custom JavaScript
         add_action('wp_footer', [self::class, 'echoFooterJavaScript'], 100);
 
         add_shortcode('fontfout-htmlclass', [self::class, 'shortcodeHandler']);
@@ -26,7 +35,7 @@ class FontFout
      */
     public static function htmlClass()
     {
-        if (isset($_COOKIE['fonts-loaded'])) {
+        if (isset($_COOKIE[self::$cookieName])) {
             self::$fontsLoaded = true;
             return 'fonts-loaded';
         } else {
@@ -58,6 +67,7 @@ class FontFout
             function r(a,b){if(a.a===q){if(b===a)throw new TypeError("Promise settled with itself.");var c=!1;try{var d=b&&b.then;if(null!==b&&"object"===typeof b&&"function"===typeof d){d.call(b,function(b){c||r(a,b);c=!0},function(b){c||t(a,b);c=!0});return}}catch(e){c||t(a,e);return}a.a=0;a.b=b;w(a)}}function t(a,b){if(a.a===q){if(b===a)throw new TypeError("Promise settled with itself.");a.a=1;a.b=b;w(a)}}
             function w(a){g(function(){if(a.a!==q)for(;a.f.length;){var b=a.f.shift(),c=b[0],d=b[1],e=b[2],b=b[3];try{0===a.a?"function"===typeof c?e(c.call(void 0,a.b)):e(a.b):1===a.a&&("function"===typeof d?e(d.call(void 0,a.b)):b(a.b))}catch(h){b(h)}}})}p.prototype.g=function(a){return this.c(void 0,a)};p.prototype.c=function(a,b){var c=this;return new p(function(d,e){c.f.push([a,b,d,e]);w(c)})};
             function x(a){return new p(function(b,c){function d(c){return function(d){h[c]=d;e+=1;e===a.length&&b(h)}}var e=0,h=[];0===a.length&&b(h);for(var k=0;k<a.length;k+=1)v(a[k]).c(d(k),c)})}function y(a){return new p(function(b,c){for(var d=0;d<a.length;d+=1)v(a[d]).c(b,c)})};window.Promise||(window.Promise=p,window.Promise.resolve=v,window.Promise.reject=u,window.Promise.race=y,window.Promise.all=x,window.Promise.prototype.then=p.prototype.c,window.Promise.prototype["catch"]=p.prototype.g);}());
+
             (function(){'use strict';function h(a){document.body?a():document.addEventListener("DOMContentLoaded",a)};function v(a){this.a=document.createElement("div");this.a.setAttribute("aria-hidden","true");this.a.appendChild(document.createTextNode(a));this.b=document.createElement("span");this.c=document.createElement("span");this.h=document.createElement("span");this.g=document.createElement("span");this.f=-1;this.b.style.cssText="display:inline-block;position:absolute;height:100%;width:100%;overflow:scroll;font-size:16px;";this.c.style.cssText="display:inline-block;position:absolute;height:100%;width:100%;overflow:scroll;font-size:16px;";
             this.g.style.cssText="display:inline-block;position:absolute;height:100%;width:100%;overflow:scroll;font-size:16px;";this.h.style.cssText="display:inline-block;width:200%;height:200%;font-size:16px;";this.b.appendChild(this.h);this.c.appendChild(this.g);this.a.appendChild(this.b);this.a.appendChild(this.c)}
             function w(a,c,b){a.a.style.cssText="min-width:20px;min-height:20px;display:inline-block;overflow:hidden;position:absolute;width:auto;margin:0;padding:0;top:-999px;left:-999px;white-space:nowrap;font-size:100px;font-family:"+c+";"+b}function x(a){var c=a.a.offsetWidth,b=c+100;a.g.style.width=b+"px";a.c.scrollLeft=b;a.b.scrollLeft=a.b.scrollWidth+100;return a.f!==c?(a.f=c,!0):!1}
@@ -75,7 +85,7 @@ class FontFout
         }
 
         ?>
-            </script>
+</script>
         <?php
     }
 
@@ -87,12 +97,13 @@ class FontFout
     public static function echoSingleFamilyCheck()
     {
         ?>
+            
             var o = new FontFaceObserver('<?php echo self::$fontFamilies[0]?>');
-                    o.check().then(function() {
+            o.check().then(function() {
         <?php
             self::echoFontLoadedCode();
         ?>
-            });
+    });
         <?php
     }
 
@@ -107,6 +118,7 @@ class FontFout
 
         // Shortern the output
         ?>
+
             var _f = FontFaceObserver;
         <?php
 
@@ -115,17 +127,18 @@ class FontFout
             $family = self::$fontFamilies[$i];
             $observers[] = "o$i.check()";
         ?>
-            var o<?php echo $i ?> = new _f('<?php echo $family ?>');
+    var o<?php echo $i ?> = new _f('<?php echo $family ?>');
         <?php
         endfor;
 
         // Create a promise that resolves when all fonts are loaded
         ?>
+
             Promise.all([<?php echo implode($observers, ', ') ?>]).then(function() {
         <?php
             self::echoFontLoadedCode();
         ?>
-            });
+    });
         <?php
     }
 
@@ -136,9 +149,11 @@ class FontFout
      */
     public static function echoFontLoadedCode()
     {
+        $expiresString = date('r', time() + self::$cookieDuration);
+
         ?>
-                document.documentElement.className += ' fonts-loaded';
-                        document.cookie = 'fonts-loaded=1;';
+        document.documentElement.className += ' fonts-loaded';
+                document.cookie = '<?php echo self::$cookieName; ?>=1; expires=<?php echo $expiresString; ?>; path=<?php echo home_url('/', 'relative'); ?>';
         <?php
     }
 
