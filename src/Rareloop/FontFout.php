@@ -36,7 +36,7 @@ class FontFout
     public static function htmlClass()
     {
         if (isset($_COOKIE[static::$cookieName])) {
-            // static::$fontsLoaded = true;
+            static::$fontsLoaded = true;
             return 'fonts-loaded';
         } else {
             return '';
