@@ -16,16 +16,16 @@ class FontFout
     public static function init($fontFamilies = [], $cookieName = 'fonts-loaded', $cookieDuration = 86400)
     {
         // Setup the static variables we need
-        self::$fontFamilies = $fontFamilies;
-        self::$cookieName = $cookieName;
+        static::$fontFamilies = $fontFamilies;
+        static::$cookieName = $cookieName;
 
         // Google Font's serves fonts with an expiration of 1 day (our default)
-        self::$cookieDuration = $cookieDuration;
+        static::$cookieDuration = $cookieDuration;
 
         // Hook into the footer action so that we can inject some custom JavaScript
-        add_action('wp_footer', [self::class, 'echoFooterJavaScript'], 100);
+        add_action('wp_footer', [static::class, 'echoFooterJavaScript'], 100);
 
-        add_shortcode('fontfout-htmlclass', [self::class, 'shortcodeHandler']);
+        add_shortcode('fontfout-htmlclass', [static::class, 'shortcodeHandler']);
     }
 
     /**
@@ -35,8 +35,8 @@ class FontFout
      */
     public static function htmlClass()
     {
-        if (isset($_COOKIE[self::$cookieName])) {
-            self::$fontsLoaded = true;
+        if (isset($_COOKIE[static::$cookieName])) {
+            // static::$fontsLoaded = true;
             return 'fonts-loaded';
         } else {
             return '';
@@ -51,12 +51,12 @@ class FontFout
     public static function echoFooterJavaScript()
     {
         // If we don't have any font families then exit early
-        if (empty(self::$fontFamilies)) {
+        if (empty(static::$fontFamilies)) {
             return;
         }
 
         // If the cookie is set then don't add any extra payload
-        if (self::$fontsLoaded) {
+        if (static::$fontsLoaded) {
             return;
         }
 
@@ -78,10 +78,10 @@ class FontFout
         <?php
 
         // Work out which version of the JS we need to output
-        if (count(self::$fontFamilies) === 1) {
-            self::echoSingleFamilyCheck();
+        if (count(static::$fontFamilies) === 1) {
+            static::echoSingleFamilyCheck();
         } else {
-            self::echoMultiFamilyCheck();
+            static::echoMultiFamilyCheck();
         }
 
         ?>
@@ -98,10 +98,10 @@ class FontFout
     {
         ?>
             
-            var o = new FontFaceObserver('<?php echo self::$fontFamilies[0]?>');
+            var o = new FontFaceObserver('<?php echo static::$fontFamilies[0]?>');
             o.check().then(function() {
         <?php
-            self::echoFontLoadedCode();
+            static::echoFontLoadedCode();
         ?>
     });
         <?php
@@ -123,8 +123,8 @@ class FontFout
         <?php
 
         // Get an observer for each font family
-        for ($i = 0; $i < count(self::$fontFamilies); $i++) :
-            $family = self::$fontFamilies[$i];
+        for ($i = 0; $i < count(static::$fontFamilies); $i++) :
+            $family = static::$fontFamilies[$i];
             $observers[] = "o$i.check()";
         ?>
     var o<?php echo $i ?> = new _f('<?php echo $family ?>');
@@ -136,7 +136,7 @@ class FontFout
 
             Promise.all([<?php echo implode($observers, ', ') ?>]).then(function() {
         <?php
-            self::echoFontLoadedCode();
+            static::echoFontLoadedCode();
         ?>
     });
         <?php
@@ -149,11 +149,11 @@ class FontFout
      */
     public static function echoFontLoadedCode()
     {
-        $expiresString = date('r', time() + self::$cookieDuration);
-
         ?>
         document.documentElement.className += ' fonts-loaded';
-                document.cookie = '<?php echo self::$cookieName; ?>=1; expires=<?php echo $expiresString; ?>; path=<?php echo home_url('/', 'relative'); ?>';
+                var t = new Date();
+                t.setSeconds(t.getSeconds() + <?php echo static::$cookieDuration; ?>);
+                document.cookie = '<?php echo static::$cookieName; ?>=1; expires=' + t + '; path=<?php echo home_url('/', 'relative'); ?>';
         <?php
     }
 
@@ -162,6 +162,6 @@ class FontFout
      */
     public static function shortcodeHandler($attr, $content = null)
     {
-        return self::htmlClass();
+        return static::htmlClass();
     }
 }
