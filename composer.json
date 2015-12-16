@@ -1,15 +1,15 @@
 {
     "name": "rareloop/font-fout",
-    "description": "Optimises font loading",
+    "description": "Optimise font loading, producing a FOUT instead of a FOIT",
     "type": "wordpress-plugin",
     "authors": [
         {
-            "name": "Adam Tomat",
-            "email": "adam.tomat@rareloop.com"
-        },
-        {
             "name": "Joe Lambert",
             "email": "joe@rareloop.com"
+        },
+        {
+            "name": "Adam Tomat",
+            "email": "adam.tomat@rareloop.com"
         }
     ],
     "require": {
