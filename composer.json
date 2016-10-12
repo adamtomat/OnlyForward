@@ -1,6 +1,6 @@
 {
-    "name": "rareloop/font-fout",
-    "description": "Optimise font loading, producing a FOUT instead of a FOIT",
+    "name": "rareloop/wp-acf-map-drawing",
+    "description": "WordPress plugin to allow drawing on a map and saving to acf",
     "type": "wordpress-plugin",
     "authors": [
         {
