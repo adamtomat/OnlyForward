@@ -32,8 +32,8 @@ class AcfMapField extends acf_field
 
         wp_enqueue_style('leaflet', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.css');
 
-        wp_enqueue_script('acf-input-test', plugins_url('wp-acf-map-drawing/src/Rareloop/js/interactive-map.js'), array('jquery'));
-        wp_enqueue_style('acf-input-test', plugins_url('wp-acf-map-drawing/src/Rareloop/css/interactive-map.css'), []);
+        wp_enqueue_script('acf-input-test', plugins_url('wp-acf-map-drawing/assets/js/interactive-map.js'), array('jquery'));
+        wp_enqueue_style('acf-input-test', plugins_url('wp-acf-map-drawing/assets/css/interactive-map.css'), []);
 
         parent::__construct();
     }
@@ -68,18 +68,18 @@ class AcfMapField extends acf_field
         */
         ?>
         <div class="interactive-map">
-            <!-- <div class="acf-hidden"> -->
-                <input type="text" class="interactive-map__input interactive-map__input--geojson" name="<?php echo $fieldName; ?>[geoJSON]" value='<?php echo $geoJSON; ?>' />
-                <input type="text" class="interactive-map__input interactive-map__input--type" name="<?php echo $fieldName; ?>[type]" value="<?php echo $type; ?>" />
-            <!-- </div> -->
+            <div class="acf-hidden">
+                <input type="hidden" class="interactive-map__input interactive-map__input--geojson" name="<?php echo $fieldName; ?>[geoJSON]" value='<?php echo $geoJSON; ?>' />
+                <input type="hidden" class="interactive-map__input interactive-map__input--type" name="<?php echo $fieldName; ?>[type]" value="<?php echo $type; ?>" />
+            </div>
 
             <div class="interactive-map__canvas">
                 <div class="map-tools map-tools--draw">
-                    <a href="#" class="map-tools__button" data-type="polygon">Polygon</a>
-                    <a href="#" class="map-tools__button" data-type="marker">Marker</a>
+                    <a href="#" class="map-tools__button" data-type="polygon"></a>
+                    <a href="#" class="map-tools__button" data-type="marker"></a>
                 </div>
                 <div class="map-tools map-tools--drawing">
-                    <a href="#" class="map-tools__button" data-type="complete">Complete</a>
+                    <a href="#" class="map-tools__button" data-type="complete">Done</a>
                 </div>
                 <div class="map-tools map-tools--delete">
                     <a href="#" class="map-tools__button" data-type="delete">Delete</a>
