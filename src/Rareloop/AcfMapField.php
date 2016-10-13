@@ -27,13 +27,13 @@ class AcfMapField extends acf_field
         // settings (array) Store plugin settings (url, path, version) as a reference for later use with assets
         // $this->settings = $settings;
 
-        wp_enqueue_script('leaflet', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js');
-        wp_enqueue_script('leaflet-editable', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet-editable/0.6.2/Leaflet.Editable.min.js');
+        wp_enqueue_script('leaflet', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js', [], false, true);
+        wp_enqueue_script('leaflet-editable', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet-editable/0.6.2/Leaflet.Editable.min.js', [], false, true);
 
         wp_enqueue_style('leaflet', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.css');
 
-        wp_enqueue_script('acf-input-test', plugins_url('wp-acf-map-drawing/assets/js/interactive-map.js'), array('jquery'));
-        wp_enqueue_style('acf-input-test', plugins_url('wp-acf-map-drawing/assets/css/interactive-map.css'), []);
+        wp_enqueue_script('acf-input-test', plugins_url('wp-acf-map-drawing/assets/js/interactive-map.js'), ['jquery'], false, true);
+        wp_enqueue_style('acf-input-test', plugins_url('wp-acf-map-drawing/assets/css/interactive-map.css'));
 
         parent::__construct();
     }
@@ -57,11 +57,13 @@ class AcfMapField extends acf_field
         // echo '<pre>';
         //     print_r($field);
         // echo '</pre>';
+        $data = $field['value'];
 
-        $geoJSON = !empty($field['value']['geoJSON']) ? $field['value']['geoJSON'] : null;
-        $type = !empty($field['value']['type']) ? $field['value']['type'] : null;
+        $geoJSON = !empty($data['geoJSON']) ? $data['geoJSON'] : null;
+        $type = !empty($data['type']) ? $data['type'] : null;
 
         $fieldName = esc_attr($field['name']);
+        $fieldAddress = !empty($data['address']) ? $data['address'] : null;
 
         /*
         *  Create a simple text input using the 'font_size' setting.
@@ -71,6 +73,11 @@ class AcfMapField extends acf_field
             <div class="acf-hidden">
                 <input type="hidden" class="interactive-map__input interactive-map__input--geojson" name="<?php echo $fieldName; ?>[geoJSON]" value='<?php echo $geoJSON; ?>' />
                 <input type="hidden" class="interactive-map__input interactive-map__input--type" name="<?php echo $fieldName; ?>[type]" value="<?php echo $type; ?>" />
+            </div>
+
+            <div class="interactive-map__search">
+                <input class="search" type="text" placeholder="<?php _e("Search for address...", 'acf'); ?>" value="<?php echo $fieldAddress; ?>" />
+                <i class="acf-loading"></i>
             </div>
 
             <div class="interactive-map__canvas">
@@ -148,18 +155,33 @@ class AcfMapField extends acf_field
     *  @param   $post_id (int)
     *  @return  $post_id (int)
     */
-    // public function input_admin_footer()
-    // {
-    //    // vars
-    //     $api = [
+    public function input_admin_footer()
+    {
+        // vars
+        $api = [
+            'libraries' => 'places',
+            'key' => acf_get_setting('google_api_key'),
+            'client' => acf_get_setting('google_api_client'),
+        ];
 
-    //     ];
+        // filter
+        $api = apply_filters('acf/fields/google_map/api', $api);
 
-    //     // filter
-    //     $api = apply_filters('acf/fields/interactive_map/api', $api);
-    // }
+        // remove empty
+        if (empty($api['key'])) {
+            unset($api['key']);
+        }
 
-    // public function update_value($value, $post_id, $field) {
-    //     return $value;
-    // }
+        if (empty($api['client'])) {
+            unset($api['client']);
+        }
+
+        ?>
+
+        <script type="text/javascript">
+            acf.fields.google_map.api = <?php echo json_encode($api); ?>;
+        </script>
+
+        <?php
+    }
 }

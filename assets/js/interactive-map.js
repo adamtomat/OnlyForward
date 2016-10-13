@@ -19,7 +19,73 @@
         };
     };
 
-    var InteractiveMap = function(elem) {
+    var SearchAutocomplete = function (elem) {
+        this.surface = $(elem);
+        this.results = this.surface.append('<ul class="autocomplete-results"></ul>');
+
+        this.autocompleteService = new google.maps.places.AutocompleteService();
+        this.placeService = new google.maps.places.PlacesService($('.interactive-map__canvas')[0]);
+
+        this.addEventListeners();
+    };
+
+    SearchAutocomplete.prototype.addEventListeners = function() {
+        var _this = this;
+
+        this.surface.find('.search').on('keyup', function (event) {
+            var searchTerm = $(this).val();
+
+            var request = {
+                input: searchTerm,
+                offset: searchTerm.length,
+            };
+
+            _this.autocompleteService.getPlacePredictions(request, function (predictions, status) {
+                if (status != google.maps.places.PlacesServiceStatus.OK) {
+                    alert(status);
+                    return;
+                }
+
+                _this.displaySuggestions(predictions);
+            });
+        });
+    };
+
+    SearchAutocomplete.prototype.displaySuggestions = function(predictions) {
+        var _this = this;
+
+        var template = [
+            '<li class="autocomplete-results__item">',
+                '<div class="prediction">',
+                '</div>',
+            '</li>',
+        ];
+
+        $.each(predictions, function (index, prediction) {
+            if (index === 0) {
+                _this.placeService.getDetails({
+                    placeId: prediction.place_id,
+                }, function (place, status) {
+                    if (status == google.maps.places.PlacesServiceStatus.OK) {
+                        console.log(place);
+                        console.log(place.geometry.location.lat());
+                        console.log(place.geometry.location.lng());
+                    }
+                });
+            }
+
+            var result = $(template.join(''));
+            var description = prediction.description;
+
+            result.find('.prediction').html(description);
+        });
+    };
+
+    /**
+     * Interactive Map
+     * @param {Node} elem
+     */
+    var InteractiveMap = function (elem) {
         this.surface = $(elem);
 
         this.inputGeoJSON = this.surface.find('.interactive-map__input--geojson');
@@ -28,6 +94,8 @@
         this.toolsDraw = this.surface.find('.map-tools--draw');
         this.toolsDrawing = this.surface.find('.map-tools--drawing');
         this.toolsDelete = this.surface.find('.map-tools--delete');
+
+        this.searchField = this.surface.find('.interactive-map__search');
 
         this.shapeOptions = {
             polygon: {
@@ -66,6 +134,10 @@
         this.addTiles();
         this.addControls();
         this.addEventBindings();
+
+        // Initialise the auto-complete service. Can't use the full autocomplete tool as we're using
+        // Leaflet and it only works with Google Maps
+        this.searchAutocomplete = new SearchAutocomplete(this.searchField[0]);
 
         this.showDrawTools();
 
@@ -310,9 +382,125 @@
         }).addTo(this.map);
     };
 
-    $(document).ready(function() {
-        $('.interactive-map').each(function (index, elem) {
-            return new InteractiveMap(elem);
-        });
+    /*
+    *  ready append (ACF5)
+    *
+    *  These are 2 events which are fired during the page load
+    *  ready = on page load similar to $(document).ready()
+    *  append = on new DOM elements appended via repeater field
+    *
+    *  @type    event
+    *  @date    20/07/13
+    *
+    *  @param   $el (jQuery selection) the jQuery element which contains the ACF fields
+    *  @return  n/a
+    */
+    // acf.add_action('ready append', function ($el) {
+    // });
+    acf.fields.interactive_map = acf.field.extend({
+        type: 'interactive_map',
+        api: {
+            // sensor:     false,
+            libraries:  'places'
+        },
+        actions: {
+            'ready': 'beforeInitialize'
+        },
+        beforeInitialize: function () {
+            var _this = this;
+
+            // Wait a short amount of time, to let the google_maps plugin to start initializing
+            setTimeout(function () {
+                // If there's no google_map plugin on this page, then we can just carry on as normal.
+                // Don't need to worry about downloading Google Maps >1 times
+                if (acf.fields.google_map.$el.length === 0) {
+                    // Download Google Maps. Needed for the Autocomplete stuff. Don't initialize until
+                    // it has downloaded
+                    if (!_this.is_ready()) {
+                        return false;
+                    }
+
+                    return _this.initialize();
+                }
+
+                var pollCount = 0;
+                var pollWaitTime = 100;
+
+                // Now it gets complicated as acf.fields.google_map has already started downloading
+                // Google Maps. We don't want to download it again as it can cause issues.
+                // There's no callbacks for when google maps has downloaded, or when google_map has
+                // finished. So the only thing we can do is poll (every 100ms) and ask:
+                // "Has google_map finished loading everything and do we have access to google places now"
+                var checkGoogleMaps = setInterval(function () {
+                    pollCount += pollWaitTime;
+
+                    var isAcfFieldFinished = acf.fields.google_map.$pending.length === 0;
+                    var isGoogleMapsAvailable = acf.isset(window, 'google', 'maps', 'places');
+
+                    // Everything has loaded, so initialize the interactive map
+                    if (isAcfFieldFinished && isGoogleMapsAvailable) {
+                        clearInterval(checkGoogleMaps);
+                        return _this.initialize();
+                    }
+
+                    // If we've waited ~2s
+                    if (pollCount >= 2000) {
+                        clearInterval(checkGoogleMaps);
+                        alert('Oops, something has gone wrong. Unable to load the interactive map. Please reload the page and try again.');
+
+                        return false;
+                    }
+                }, pollWaitTime);
+
+            }, 50);
+        },
+
+        initialize: function () {
+            return new InteractiveMap(acf.fields.interactive_map.$field);
+        },
+
+        is_ready: function () {
+            var _this = this;
+
+            if (this.status == 'ready') {
+                return true;
+            }
+
+            // no google
+            if (!acf.isset(window, 'google', 'load')) {
+                _this.status = 'loading';
+
+                // load API
+                $.getScript('https://www.google.com/jsapi', function(){
+                    _this.status = '';
+                    _this.initialize();
+                });
+
+                return false;
+            }
+
+            // no maps or places
+            if(!acf.isset(window, 'google', 'maps', 'places')) {
+                _this.status = 'loading';
+
+                // load maps
+                google.load('maps', '3', {
+                    other_params: $.param(_this.api),
+                    callback: function () {
+                        console.log('callback');
+                        _this.status = 'ready';
+
+                        _this.initialize();
+                    },
+                });
+
+                return false;
+            }
+
+            // google must exist already
+            this.status = 'ready';
+
+            return true;
+        },
     });
 })(jQuery);
