@@ -90,7 +90,12 @@
 
         this.shape = null;
         this.shapeEventListeners = {
-            'drag': null,
+            drag: null,
+            polygon: {
+                editPoints: null,
+                addPoints: null,
+                removePoints: null,
+            },
         };
 
         this.inputGeoJSON = this.surface.find('.interactive-map__input--geojson');
@@ -289,23 +294,38 @@
             return;
         }
 
+        // Save the shape when it's dragged on the map
         this.shapeEventListeners.drag = google.maps.event.addListener(this.shape, 'drag', debounce(function () {
+            // We don't know which shape that got changed (polygon or marker), so we use getPositionForOverlay
+            // which can work it out
             var position = _this.getPositionForOverlay(this);
 
+            // Save
             _this.saveShape(position);
         }, 150));
 
+        // Polygons need extra events to handle vertices
         if (this.currentShapeType === 'polygon') {
+            // To listen for any changes to the polygon, we have to listen for when anything in its
+            // path 'array' changes. Get this path
             var path = this.shape.getPath();
 
+            /**
+             * Get the new position data for the polygon and save it
+             */
             var updatePolygon = function () {
                 var position = _this.getPositionForPolygon(_this.shape);
                 _this.saveShape(position);
             };
 
-            this.shapeEventListeners.polygonEditPoints = google.maps.event.addListener(path, 'set_at', updatePolygon);
-            this.shapeEventListeners.polygonAddPoints = google.maps.event.addListener(path, 'insert_at', updatePolygon);
-            this.shapeEventListeners.polygonAddPoints = google.maps.event.addListener(path, 'remove_at', updatePolygon);
+            // When an existing vertex has been moved...
+            this.shapeEventListeners.polygon.editPoints = google.maps.event.addListener(path, 'set_at', updatePolygon);
+
+            // When a new vertex has been added...
+            this.shapeEventListeners.polygon.addPoints = google.maps.event.addListener(path, 'insert_at', updatePolygon);
+
+            // When a vertex has been deleted...
+            this.shapeEventListeners.polygon.removePoints = google.maps.event.addListener(path, 'remove_at', updatePolygon);
         }
     };
 
@@ -313,18 +333,25 @@
      * Remove all event listeners on the current shape
      */
     InteractiveMap.prototype.removeShapeEventListeners = function() {
-        var _this = this;
+        if (this.shapeEventListeners.drag) {
+            this.shapeEventListeners.drag.remove();
+            this.shapeEventListeners.drag = null;
+        }
 
-        // Loop over each event listener bound to the shape
-        $.each(this.shapeEventListeners, function(index) {
-            if (!_this.shapeEventListeners[index]) {
-                return false;
-            }
+        if (this.shapeEventListeners.polygon.editPoints) {
+            this.shapeEventListeners.polygon.editPoints.remove();
+            this.shapeEventListeners.polygon.editPoints = null;
+        }
 
-            // Unbind the event listener
-            _this.shapeEventListeners[index].remove();
-            _this.shapeEventListeners[index] = null;
-        });
+        if (this.shapeEventListeners.polygon.addPoints) {
+            this.shapeEventListeners.polygon.addPoints.remove();
+            this.shapeEventListeners.polygon.addPoints = null;
+        }
+
+        if (this.shapeEventListeners.polygon.removePoints) {
+            this.shapeEventListeners.polygon.removePoints.remove();
+            this.shapeEventListeners.polygon.removePoints = null;
+        }
     };
 
     /**
