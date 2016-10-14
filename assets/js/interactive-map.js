@@ -458,7 +458,7 @@
             setTimeout(function () {
                 // If there's no google_map plugin on this page, then we can just carry on as normal.
                 // Don't need to worry about downloading Google Maps >1 times
-                if (acf.fields.google_map.$el.length === 0) {
+                if (!acf.fields.google_map.$el || acf.fields.google_map.$el.length === 0) {
                     // Download Google Maps. Needed for the Autocomplete stuff. Don't initialise until
                     // it has downloaded. isReady will initialise once everything has been downloaded
                     if (!_this.isReady()) {
@@ -570,12 +570,12 @@
          * Download Google Maps and all libraries
          * @param  {Function} callback
          */
-        downloadGoogleMaps: function (callback) {
+        downloadGoogleMapsWithLibraries: function (callback) {
             callback = callback || function () {};
 
             google.load('maps', '3', {
                 // Add libraries as query parameters
-                other_params: $.param(_this.api),
+                other_params: $.param(this.api),
                 callback: callback,
             });
         },

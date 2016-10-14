@@ -70,10 +70,10 @@ class AcfMapField extends acf_field
         */
         ?>
         <div class="interactive-map">
-            <!-- <div class="acf-hidden"> -->
-                <input type="text" class="interactive-map__input interactive-map__input--geojson" name="<?php echo $fieldName; ?>[geoJSON]" value='<?php echo $geoJSON; ?>' />
-                <input type="text" class="interactive-map__input interactive-map__input--type" name="<?php echo $fieldName; ?>[type]" value="<?php echo $type; ?>" />
-            <!-- </div> -->
+            <div class="acf-hidden">
+                <input type="hidden" class="interactive-map__input interactive-map__input--geojson" name="<?php echo $fieldName; ?>[geoJSON]" value='<?php echo $geoJSON; ?>' />
+                <input type="hidden" class="interactive-map__input interactive-map__input--type" name="<?php echo $fieldName; ?>[type]" value="<?php echo $type; ?>" />
+            </div>
 
             <div class="interactive-map__search">
                 <input class="search" type="text" placeholder="<?php _e("Search for address...", 'acf'); ?>" value="<?php echo $fieldAddress; ?>" />
