@@ -2,7 +2,10 @@
     position: relative;
 
     height: 400px;
+}
 
+.interactive-map__canvas .map {
+    height: 100%;
 }
 
 .interactive-map__canvas .leaflet-div-icon {

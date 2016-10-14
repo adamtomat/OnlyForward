@@ -70,27 +70,22 @@ class AcfMapField extends acf_field
         */
         ?>
         <div class="interactive-map">
-            <div class="acf-hidden">
-                <input type="hidden" class="interactive-map__input interactive-map__input--geojson" name="<?php echo $fieldName; ?>[geoJSON]" value='<?php echo $geoJSON; ?>' />
-                <input type="hidden" class="interactive-map__input interactive-map__input--type" name="<?php echo $fieldName; ?>[type]" value="<?php echo $type; ?>" />
-            </div>
+            <!-- <div class="acf-hidden"> -->
+                <input type="text" class="interactive-map__input interactive-map__input--geojson" name="<?php echo $fieldName; ?>[geoJSON]" value='<?php echo $geoJSON; ?>' />
+                <input type="text" class="interactive-map__input interactive-map__input--type" name="<?php echo $fieldName; ?>[type]" value="<?php echo $type; ?>" />
+            <!-- </div> -->
 
             <div class="interactive-map__search">
                 <input class="search" type="text" placeholder="<?php _e("Search for address...", 'acf'); ?>" value="<?php echo $fieldAddress; ?>" />
-                <i class="acf-loading"></i>
             </div>
 
+
             <div class="interactive-map__canvas">
-                <div class="map-tools map-tools--draw">
-                    <a href="#" class="map-tools__button" data-type="polygon"></a>
-                    <a href="#" class="map-tools__button" data-type="marker"></a>
-                </div>
-                <div class="map-tools map-tools--drawing">
-                    <a href="#" class="map-tools__button" data-type="complete">Done</a>
-                </div>
                 <div class="map-tools map-tools--delete">
                     <a href="#" class="map-tools__button" data-type="delete">Delete</a>
                 </div>
+
+                <div class="map"></div>
             </div>
         </div>
         <?php
