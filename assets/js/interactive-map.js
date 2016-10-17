@@ -1,4 +1,4 @@
-(function($) {
+(function ($) {
     // deBouncer by hnldesign.nl
     // based on code by Paul Irish and the original debouncing function from John Hann
     // http://unscriptable.com/index.php/2009/03/20/debouncing-javascript-methods/
@@ -19,67 +19,133 @@
         };
     };
 
-    // var SearchAutocomplete = function (elem) {
-    //     this.surface = $(elem);
-    //     this.results = this.surface.append('<ul class="autocomplete-results"></ul>');
+    var SearchAutocomplete = function (elem, map) {
+        this.map = map;
+        this.surface = $(elem);
+        this.mapCanvas = this.surface.next('.interactive-map__canvas');
 
-    //     this.autocompleteService = new google.maps.places.AutocompleteService();
-    //     this.placeService = new google.maps.places.PlacesService($('.interactive-map__canvas')[0]);
+        this.results = $('<ul class="autocomplete-results"></ul>').appendTo(this.surface);
 
-    //     this.addEventListeners();
-    // };
+        this.autocompleteService = new google.maps.places.AutocompleteService();
+        this.placeService = new google.maps.places.PlacesService(this.map);
 
-    // SearchAutocomplete.prototype.addEventListeners = function() {
-    //     var _this = this;
+        this.infowindow = null;
 
-    //     this.surface.find('.search').on('keyup', function (event) {
-    //         var searchTerm = $(this).val();
+        this.addEventListeners();
+    };
 
-    //         var request = {
-    //             input: searchTerm,
-    //             offset: searchTerm.length,
-    //         };
+    SearchAutocomplete.prototype.addEventListeners = function () {
+        var _this = this;
 
-    //         _this.autocompleteService.getPlacePredictions(request, function (predictions, status) {
-    //             if (status != google.maps.places.PlacesServiceStatus.OK) {
-    //                 alert(status);
-    //                 return;
-    //             }
+        this.surface.on('closeInfoWindow', function () {
+            if (!_this.infoWindow) {
+                return;
+            }
 
-    //             _this.displaySuggestions(predictions);
-    //         });
-    //     });
-    // };
+            _this.infoWindow.close();
+        });
 
-    // SearchAutocomplete.prototype.displaySuggestions = function(predictions) {
-    //     var _this = this;
+        this.surface.find('.search').on('keyup', function (event) {
+            var searchTerm = $(this).val();
 
-    //     var template = [
-    //         '<li class="autocomplete-results__item">',
-    //             '<div class="prediction">',
-    //             '</div>',
-    //         '</li>',
-    //     ];
+            var request = {
+                input: searchTerm,
+                offset: searchTerm.length,
+            };
 
-    //     $.each(predictions, function (index, prediction) {
-    //         if (index === 0) {
-    //             _this.placeService.getDetails({
-    //                 placeId: prediction.place_id,
-    //             }, function (place, status) {
-    //                 if (status == google.maps.places.PlacesServiceStatus.OK) {
-    //                     console.log(place);
-    //                     console.log(place.geometry.location.lat());
-    //                     console.log(place.geometry.location.lng());
-    //                 }
-    //             });
-    //         }
+            _this.autocompleteService.getPlacePredictions(request, function (predictions, status) {
+                if (status != google.maps.places.PlacesServiceStatus.OK) {
+                    alert(status);
+                    return;
+                }
 
-    //         var result = $(template.join(''));
-    //         var description = prediction.description;
+                _this.displaySuggestions(predictions);
+            });
+        });
 
-    //         result.find('.prediction').html(description);
-    //     });
-    // };
+        this.results.on('click', '.prediction', function (event) {
+            event.preventDefault();
+
+            var placeId = $(this).data('place-id');
+            var title = $(this).text();
+
+            _this.placeService.getDetails({
+                placeId: placeId,
+            }, function (place, status) {
+                if (status == google.maps.places.PlacesServiceStatus.OK) {
+                    var lat = place.geometry.location.lat();
+                    var lng = place.geometry.location.lng();
+
+                    _this.addInfoWindow(lat, lng, title);
+
+                    if ('viewport' in place.geometry) {
+                        _this.map.fitBounds(place.geometry.viewport);
+                    } else {
+                        var latLng = new google.maps.LatLng(lat, lng);
+
+                        _this.map.fitBounds(new google.maps.LatLngBounds(latLng));
+                    }
+                }
+            });
+        });
+
+        this.mapCanvas.on('click', '.add-marker', function (event) {
+            event.preventDefault();
+
+            var infoWindow = $(this).closest('.info-window');
+
+            _this.surface.trigger('addMarker', {
+                lat: infoWindow.data('lat'),
+                lng: infoWindow.data('lng'),
+            });
+        });
+    };
+
+    SearchAutocomplete.prototype.addInfoWindow = function(lat, lng, title) {
+        var content = [
+            '<div class="info-window" data-lat="'+lat+'" data-lng="'+lng+'">',
+                '<div class="info-window__title">',
+                    title,
+                '</div>',
+                '<a href="#" class="info-window__button add-marker">Add marker</a>',
+            '</div>'
+        ];
+
+        this.infoWindow = new google.maps.InfoWindow({
+            content: content.join(''),
+        });
+
+        this.infoWindow.setPosition({
+            lat: lat,
+            lng: lng,
+        });
+
+        this.infoWindow.open(this.map);
+    };
+
+    SearchAutocomplete.prototype.displaySuggestions = function (predictions) {
+        var template = [
+            '<li class="autocomplete-results__item">',
+                '<a href="#" class="prediction">',
+                '</a>',
+            '</li>',
+        ];
+
+        var predictionElems = [];
+
+        $.each(predictions, function (index, prediction) {
+            var result = $(template.join(''));
+            var description = prediction.description;
+
+            result.find('.prediction')
+                .html(description)
+                .data('place-id', prediction.place_id);
+
+            predictionElems.push(result);
+        });
+
+        this.results.html(predictionElems);
+    };
 
     /**
      * Interactive Map
@@ -110,6 +176,7 @@
             center: L.latLng(-37.81411, 144.96328),
             zoom: 8,
             mapTypeControl: false,
+            maxZoom: 14,
         });
 
         this.drawingManager = new google.maps.drawing.DrawingManager({
@@ -119,7 +186,7 @@
                 position: google.maps.ControlPosition.TOP_LEFT,
                 drawingModes: [
                     'marker',
-                    'polygon'
+                    'polygon',
                 ],
             },
             polygonOptions: {
@@ -138,20 +205,15 @@
 
         this.drawingManager.setMap(this.map);
 
-        // Initialise the auto-complete service. Can't use the full autocomplete tool as we're using
-        // Leaflet and it only works with Google Maps
-        // this.searchAutocomplete = new SearchAutocomplete(this.searchField[0]);
+        // Initialise the auto-complete service
+        this.searchAutocomplete = new SearchAutocomplete(this.searchField[0], this.map);
 
         this.showDrawTools();
         this.addSavedShapeToMap();
         this.addEventBindings();
-
-        // this.surface.find('.map-tools__button').each(function (index, elem) {
-        //     L.DomEvent.disableClickPropagation(elem);
-        // });
     };
 
-    InteractiveMap.prototype.addSavedShapeToMap = function() {
+    InteractiveMap.prototype.addSavedShapeToMap = function () {
         // Get the saved positionJSON and type
         var positionJSON = this.inputGeoJSON.val();
         var type = this.inputType.val();
@@ -178,14 +240,7 @@
             // Draw the polygon on the map
             this.shape = new google.maps.Polygon(shapeOptions);
         } else if (this.currentShapeType === 'marker') {
-            // Grab the shape options from the drawingManager and add the map & path info to it
-            shapeOptions = $.extend({}, this.drawingManager.get('markerOptions'), {
-                map: this.map,
-                position: position,
-            });
-
-            // Draw the marker on the map
-            this.shape = new google.maps.Marker(shapeOptions);
+            this.addMarker(position);
         }
 
         this.showDeleteTools();
@@ -194,7 +249,7 @@
     /**
      * Show the delete tools, and hide all other tools
      */
-    InteractiveMap.prototype.showDeleteTools = function() {
+    InteractiveMap.prototype.showDeleteTools = function () {
         this.toolsDelete.show();
 
         this.drawingManager.setOptions({
@@ -205,7 +260,7 @@
     /**
      * Show the draw tools, and hide all other tools (e.g. polygon, marker)
      */
-    InteractiveMap.prototype.showDrawTools = function() {
+    InteractiveMap.prototype.showDrawTools = function () {
         this.drawingManager.setOptions({
             drawingControl: true,
         });
@@ -216,7 +271,7 @@
     /**
      * Hide all tools
      */
-    InteractiveMap.prototype.hideTools = function() {
+    InteractiveMap.prototype.hideTools = function () {
         this.toolsDraw.hide();
         this.toolsDelete.hide();
     };
@@ -224,7 +279,7 @@
     /**
      * Binds all the event listeners
      */
-    InteractiveMap.prototype.addEventBindings = function() {
+    InteractiveMap.prototype.addEventBindings = function () {
         var _this = this;
 
         /**
@@ -259,7 +314,7 @@
             }
         });
 
-        google.maps.event.addListener(this.drawingManager, 'overlaycomplete', function(event) {
+        google.maps.event.addListener(this.drawingManager, 'overlaycomplete', function (event) {
             _this.removeShapeEventListeners();
 
             // Update our shape and type references
@@ -277,6 +332,24 @@
             _this.drawingManager.setOptions({
                 drawingMode: null,
             });
+        });
+
+        this.searchField.on('addMarker', function (event, data) {
+            if (_this.shape) {
+                var overwriteShape = confirm('You already have a '+_this.currentShapeType+' on the map. Do you want to overwrite it?');
+
+                if (!overwriteShape) {
+                    return;
+                }
+
+                _this.deleteShape();
+            }
+
+            _this.searchField.trigger('closeInfoWindow');
+
+            _this.addMarker(data);
+            _this.addShapeEventListeners();
+            _this.showDeleteTools();
         });
 
         this.addShapeEventListeners();
@@ -332,7 +405,7 @@
     /**
      * Remove all event listeners on the current shape
      */
-    InteractiveMap.prototype.removeShapeEventListeners = function() {
+    InteractiveMap.prototype.removeShapeEventListeners = function () {
         if (this.shapeEventListeners.drag) {
             this.shapeEventListeners.drag.remove();
             this.shapeEventListeners.drag = null;
@@ -357,11 +430,12 @@
     /**
      * Deletes the shape from the map and empties hidden inputs
      */
-    InteractiveMap.prototype.deleteShape = function() {
+    InteractiveMap.prototype.deleteShape = function () {
         this.removeShapeEventListeners();
 
         this.shape.setMap(null);
         this.shape = null;
+        this.currentShapeType = null;
 
         // Reset the tools
         this.showDrawTools();
@@ -371,7 +445,21 @@
         this.inputType.val('');
     };
 
-    InteractiveMap.prototype.getPositionForOverlay = function(overlay) {
+    InteractiveMap.prototype.addMarker = function(position) {
+        // Grab the shape options from the drawingManager and add the map & path info to it
+        var shapeOptions = $.extend({}, this.drawingManager.get('markerOptions'), {
+            map: this.map,
+            position: position,
+        });
+
+        // Draw the marker on the map
+        this.shape = new google.maps.Marker(shapeOptions);
+        this.currentShapeType = 'marker';
+
+        this.saveShape(position);
+    };
+
+    InteractiveMap.prototype.getPositionForOverlay = function (overlay) {
         if (!overlay) {
             return;
         }
@@ -387,7 +475,7 @@
         return position;
     };
 
-    InteractiveMap.prototype.getPositionForPolygon = function(polygon) {
+    InteractiveMap.prototype.getPositionForPolygon = function (polygon) {
         position = [];
 
         polygon.getPath().forEach(function (path) {
@@ -397,7 +485,7 @@
         return position;
     };
 
-    InteractiveMap.prototype.getPositionForMarker = function(marker) {
+    InteractiveMap.prototype.getPositionForMarker = function (marker) {
         return marker.position.toJSON();
     };
 
@@ -408,7 +496,7 @@
      * @param  {Object|array} overlay An object or array of objects containing lat/lng pairs
      *                                e.g. { lat: 51, lng: 0.1 } or [{ lat: 51, lng: 0.1 }, { lat: 52, lng: 0.2 }]
      */
-    InteractiveMap.prototype.saveShape = function(position) {
+    InteractiveMap.prototype.saveShape = function (position) {
         this.inputGeoJSON.val(JSON.stringify(position));
         this.inputType.val(this.currentShapeType);
     };
