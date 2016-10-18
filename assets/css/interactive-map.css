@@ -192,6 +192,14 @@
     margin: 0;
 }
 
+.autocomplete-results__item.is-selected .prediction {
+    background-color: #ebf2ff;
+}
+
+.autocomplete-results__item.is-selected .prediction:hover {
+    background-color: #ebf2ff;
+}
+
 .prediction {
     display: block;
     padding: 10px;

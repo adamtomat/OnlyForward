@@ -35,6 +35,31 @@
         this.addEventListeners();
     };
 
+    SearchAutocomplete.prototype.findSuggestionsFromGoogle = function(searchTerm) {
+        var _this = this;
+
+        if (searchTerm.length === 0) {
+            this.clearResults();
+
+            return;
+        }
+
+        var request = {
+            input: searchTerm,
+            offset: searchTerm.length,
+        };
+
+        this.autocompleteService.getPlacePredictions(request, function (predictions, status) {
+            if (status != google.maps.places.PlacesServiceStatus.OK) {
+                _this.clearResults();
+                console.log(status);
+                return;
+            }
+
+            _this.displaySuggestions(predictions);
+        });
+    };
+
     SearchAutocomplete.prototype.addEventListeners = function () {
         var _this = this;
 
@@ -54,29 +79,12 @@
             _this.showResults();
         });
 
-        this.surface.find('.search').on('keyup', function (event) {
+        // Hit google's API with the search term when a key is pressed
+        // this ignores arrows / ctrl etc.
+        this.surface.find('.search').on('keypress', function (event) {
             var searchTerm = $(this).val();
 
-            if (searchTerm.length === 0) {
-                _this.hideResults();
-                _this.clearResults();
-
-                return;
-            }
-
-            var request = {
-                input: searchTerm,
-                offset: searchTerm.length,
-            };
-
-            _this.autocompleteService.getPlacePredictions(request, function (predictions, status) {
-                if (status != google.maps.places.PlacesServiceStatus.OK) {
-                    alert(status);
-                    return;
-                }
-
-                _this.displaySuggestions(predictions);
-            });
+            _this.findSuggestionsFromGoogle(searchTerm);
         });
 
         this.results.on('click', '.prediction', function (event) {
@@ -103,6 +111,7 @@
                     }
 
                     _this.hideResults();
+                    _this.surface.trigger('hideSearch');
                 }
             });
         });
@@ -118,30 +127,130 @@
             });
         });
 
-        this.surface.find('.search').on('blur', function (event) {
-            // Don't hide the results if we clicked on a prediction.
-            if ($(event.relatedTarget).hasClass('prediction')) {
+        // this.surface.find('.search').on('blur', function (event) {
+        //     // Don't hide the results if we clicked on a prediction.
+        //     if ($(event.relatedTarget).hasClass('prediction')) {
+        //         return;
+        //     }
+
+        //     _this.hideResults();
+        // });
+
+        this.surface.find('.search').on('keyup', function (event) {
+            var validKeys = {
+                27: 'escape',
+                13: 'enter',
+                8: 'backspace',
+                46: 'delete',
+            };
+
+            var pressedKey = validKeys[event.keyCode] || false;
+
+            if (!pressedKey) {
                 return;
             }
 
-            _this.hideResults();
+            if (pressedKey === 'enter') {
+                _this.mapCanvas.find('.is-selected .prediction').trigger('click');
+            } else if (pressedKey === 'escape') {
+                _this.hideResults();
+            } else if (pressedKey === 'backspace' || pressedKey === 'delete') {
+                var searchTerm = $(this).val();
+                _this.findSuggestionsFromGoogle(searchTerm);
+            }
+        });
+
+        this.surface.find('.search').on('keydown', function (event) {
+            var searchInput = $(this);
+
+            if (_this.totalResults === 0) {
+                return;
+            }
+
+            // Disable the 'enter' key from submitting the form
+            if (event.keyCode === 13) {
+                return false;
+            }
+
+            var navigationKeys = {
+                38: 'up',
+                40: 'down',
+            };
+
+            var pressedKey = navigationKeys[event.keyCode] || false;
+
+            if (!pressedKey) {
+                return;
+            }
+
+            var results = _this.results.find('.autocomplete-results__item').toArray();
+
+            // Find the currently selected item
+            var selectedIndex = results.findIndex(function (result) {
+                return $(result).hasClass('is-selected');
+            });
+
+            var currentSelectedIndex = selectedIndex;
+
+            // If nothing is selected, start at the first item
+            if (selectedIndex < 0) {
+                currentSelectedIndex = 0;
+            }
+
+            var newSelectedIndex = currentSelectedIndex;
+
+            var sanitizeIndex = function (index) {
+                // Get the index of the last item in the array
+                var lastItemIndex = results.length - 1;
+
+                if (index < 0) {
+                    index = lastItemIndex;
+                } else if (index > lastItemIndex) {
+                    index = 0;
+                }
+
+                return index;
+            }
+
+            _this.deselectResultsKeyboardNav();
+
+            if (pressedKey === 'down') {
+                if (selectedIndex >= 0) {
+                    newSelectedIndex++;
+                }
+            } else if (pressedKey === 'up') {
+                newSelectedIndex--;
+            }
+
+            // Select the row
+            newSelectedIndex = sanitizeIndex(newSelectedIndex);
+            $(results[newSelectedIndex]).addClass('is-selected');
+
+            event.preventDefault();
         });
     };
 
-    SearchAutocomplete.prototype.showResults = function() {
+    SearchAutocomplete.prototype.deselectResultsKeyboardNav = function() {
+        this.mapCanvas.find('.is-selected').removeClass('is-selected');
+    };
+
+    SearchAutocomplete.prototype.showResults = function () {
         this.results.removeClass('is-hidden');
     };
 
-    SearchAutocomplete.prototype.hideResults = function() {
+    SearchAutocomplete.prototype.hideResults = function () {
         this.results.addClass('is-hidden');
+        this.deselectResultsKeyboardNav();
     };
 
     SearchAutocomplete.prototype.clearResults = function () {
+        this.hideResults();
+
         this.results.html('');
         this.totalResults = 0;
     };
 
-    SearchAutocomplete.prototype.addInfoWindow = function(lat, lng, title) {
+    SearchAutocomplete.prototype.addInfoWindow = function (lat, lng, title) {
         var content = [
             '<div class="info-window" data-lat="'+lat+'" data-lng="'+lng+'">',
                 '<div class="info-window__title">',
@@ -186,12 +295,13 @@
                 // Loop over each matched string - in case there are multiple matches in the same string
                 $.each(matchedSubStrings, function (index, match) {
                     // Find the term that has the match in
-                    var term = terms.filter(function (item) {
+                    var term = terms.find(function (item) {
                         return item.offset === match.offset;
-                    }).reduce(function (prev, current) {
-                        // The filter gives us an array of 1 object, we need an object
-                        return current;
                     });
+
+                    if (!term) {
+                        return;
+                    }
 
                     // Wrap match in a span, so we can make it bold
                     var string = '<span class="prediction__match">';
@@ -390,6 +500,10 @@
             var isVisible = _this.toggleSearch();
 
             $(this).toggleClass('interactive-map__button--active', isVisible);
+
+            if (isVisible) {
+                _this.searchField.find('.search').focus();
+            }
         });
 
         google.maps.event.addListener(this.drawingManager, 'overlaycomplete', function (event) {
@@ -430,14 +544,18 @@
             _this.showDeleteTools();
         });
 
+        this.searchField.on('hideSearch', function () {
+            _this.toggleSearch();
+            _this.surface.find('.interactive-map__button--search').removeClass('interactive-map__button--active');
+        });
+
         this.addShapeEventListeners();
     };
 
     /**
      * Show / hide the search field
-     * @return {[type]} [description]
      */
-    InteractiveMap.prototype.toggleSearch = function() {
+    InteractiveMap.prototype.toggleSearch = function () {
         // Is the field already visible?
         var isSearchVisible = !this.searchField.hasClass('is-hidden');
 
@@ -533,7 +651,7 @@
         this.inputType.val('');
     };
 
-    InteractiveMap.prototype.addMarker = function(position) {
+    InteractiveMap.prototype.addMarker = function (position) {
         // Grab the shape options from the drawingManager and add the map & path info to it
         var shapeOptions = $.extend({}, this.drawingManager.get('markerOptions'), {
             map: this.map,
