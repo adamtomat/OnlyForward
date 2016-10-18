@@ -24,12 +24,13 @@
         this.surface = $(elem);
         this.mapCanvas = this.surface.next('.interactive-map__canvas');
 
-        this.results = $('<ul class="autocomplete-results"></ul>').appendTo(this.surface);
+        this.results = $('<ul class="autocomplete-results is-hidden"></ul>').prependTo(this.mapCanvas);
 
         this.autocompleteService = new google.maps.places.AutocompleteService();
         this.placeService = new google.maps.places.PlacesService(this.map);
 
         this.infowindow = null;
+        this.totalResults = 0;
 
         this.addEventListeners();
     };
@@ -45,8 +46,23 @@
             _this.infoWindow.close();
         });
 
+        this.surface.find('.search').on('focus', function (event) {
+            if (_this.totalResults === 0) {
+                 return;
+             }
+
+            _this.showResults();
+        });
+
         this.surface.find('.search').on('keyup', function (event) {
             var searchTerm = $(this).val();
+
+            if (searchTerm.length === 0) {
+                _this.hideResults();
+                _this.clearResults();
+
+                return;
+            }
 
             var request = {
                 input: searchTerm,
@@ -85,6 +101,8 @@
 
                         _this.map.fitBounds(new google.maps.LatLngBounds(latLng));
                     }
+
+                    _this.hideResults();
                 }
             });
         });
@@ -99,6 +117,28 @@
                 lng: infoWindow.data('lng'),
             });
         });
+
+        this.surface.find('.search').on('blur', function (event) {
+            // Don't hide the results if we clicked on a prediction.
+            if ($(event.relatedTarget).hasClass('prediction')) {
+                return;
+            }
+
+            _this.hideResults();
+        });
+    };
+
+    SearchAutocomplete.prototype.showResults = function() {
+        this.results.removeClass('is-hidden');
+    };
+
+    SearchAutocomplete.prototype.hideResults = function() {
+        this.results.addClass('is-hidden');
+    };
+
+    SearchAutocomplete.prototype.clearResults = function () {
+        this.results.html('');
+        this.totalResults = 0;
     };
 
     SearchAutocomplete.prototype.addInfoWindow = function(lat, lng, title) {
@@ -133,18 +173,67 @@
 
         var predictionElems = [];
 
+        // Loop through each prediction
         $.each(predictions, function (index, prediction) {
+            // Create a new Node for our result
             var result = $(template.join(''));
-            var description = prediction.description;
+            var terms = prediction.terms;
 
+            var matchedSubStrings = prediction.matched_substrings;
+
+            // If we have any matches in the string, wrap the match in a class to make it bold
+            if (matchedSubStrings.length > 0) {
+                // Loop over each matched string - in case there are multiple matches in the same string
+                $.each(matchedSubStrings, function (index, match) {
+                    // Find the term that has the match in
+                    var term = terms.filter(function (item) {
+                        return item.offset === match.offset;
+                    }).reduce(function (prev, current) {
+                        // The filter gives us an array of 1 object, we need an object
+                        return current;
+                    });
+
+                    // Wrap match in a span, so we can make it bold
+                    var string = '<span class="prediction__match">';
+                        string += term.value.substr(0, match.length);
+                    string += '</span>';
+
+                    // Glue on the rest of the unmatched term
+                    string += term.value.substr(match.length);
+
+                    // Update the original term object's value
+                    term.value = string;
+                });
+            }
+
+            // Add the first term in a span, so it can be styled differently to the rest of the prediction
+            // (e.g. bigger)
+            var place = '<span class="prediction__title">'+terms[0].value+'</span> ';
+
+            // Comma-separate the remaining terms and glue them onto the end of the place
+            // Ignore the first item as we've already added a span around it
+            place += terms.filter(function (term, index) {
+                return index !== 0;
+            }).map(function (current) {
+                // Convert object to string
+                return current.value;
+            }).join(', ');
+
+            // Add the prediction copy to markup
             result.find('.prediction')
-                .html(description)
+                .html(place)
                 .data('place-id', prediction.place_id);
 
+            // Add to the list of results
             predictionElems.push(result);
         });
 
-        this.results.html(predictionElems);
+        // Keep track of how many predictions there are
+        this.totalResults = predictions.length;
+
+        // Add the results to the DOM
+        this.results.html(predictionElems)
+            .removeClass('is-hidden');
     };
 
     /**
@@ -167,8 +256,7 @@
         this.inputGeoJSON = this.surface.find('.interactive-map__input--geojson');
         this.inputType = this.surface.find('.interactive-map__input--type');
 
-        this.toolsDraw = this.surface.find('.map-tools--draw');
-        this.toolsDelete = this.surface.find('.map-tools--delete');
+        this.deleteButton = this.surface.find('.interactive-map__button--delete');
 
         this.searchField = this.surface.find('.interactive-map__search');
 
@@ -177,6 +265,7 @@
             zoom: 8,
             mapTypeControl: false,
             maxZoom: 14,
+            streetViewControl: false,
         });
 
         this.drawingManager = new google.maps.drawing.DrawingManager({
@@ -250,7 +339,7 @@
      * Show the delete tools, and hide all other tools
      */
     InteractiveMap.prototype.showDeleteTools = function () {
-        this.toolsDelete.show();
+        this.deleteButton.show();
 
         this.drawingManager.setOptions({
             drawingControl: false,
@@ -265,15 +354,7 @@
             drawingControl: true,
         });
 
-        this.toolsDelete.hide();
-    };
-
-    /**
-     * Hide all tools
-     */
-    InteractiveMap.prototype.hideTools = function () {
-        this.toolsDraw.hide();
-        this.toolsDelete.hide();
+        this.deleteButton.hide();
     };
 
     /**
@@ -297,21 +378,18 @@
         };
 
         // When the user clicks a button on the map
-        this.surface.find('.map-tools__button').click(function (event) {
+        this.surface.find('.interactive-map__button--delete').click(function (event) {
             event.preventDefault();
 
-            // What type of button is it?
-            var type = $(this).data('type');
+            _this.deleteShape();
+        });
 
-            // If there's no type, then bail
-            if (!type) {
-                return false;
-            }
+        this.surface.find('.interactive-map__button--search').click(function (event) {
+            event.preventDefault();
 
-            if (type === 'delete') {
-                _this.deleteShape();
-                return;
-            }
+            var isVisible = _this.toggleSearch();
+
+            $(this).toggleClass('interactive-map__button--active', isVisible);
         });
 
         google.maps.event.addListener(this.drawingManager, 'overlaycomplete', function (event) {
@@ -353,11 +431,21 @@
         });
 
         this.addShapeEventListeners();
+    };
 
-        // // Save the shape when any changes are made to it. Debounced, so it doesn't spam
-        // this.map.on('editable:editing', debounce(function (event) {
-        //     _this.saveShape(event.layer);
-        // }, 300));
+    /**
+     * Show / hide the search field
+     * @return {[type]} [description]
+     */
+    InteractiveMap.prototype.toggleSearch = function() {
+        // Is the field already visible?
+        var isSearchVisible = !this.searchField.hasClass('is-hidden');
+
+        // If it's visible, add the hidden class..
+        this.searchField.toggleClass('is-hidden', isSearchVisible);
+
+        // As we've changed the visibility, return the inverse of isSearchVisible
+        return !isSearchVisible;
     };
 
     InteractiveMap.prototype.addShapeEventListeners = function () {

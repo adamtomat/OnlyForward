@@ -75,15 +75,14 @@ class AcfMapField extends acf_field
                 <input type="hidden" class="interactive-map__input interactive-map__input--type" name="<?php echo $fieldName; ?>[type]" value="<?php echo $type; ?>" />
             </div>
 
-            <div class="interactive-map__search">
+            <div class="interactive-map__search is-hidden">
                 <input class="search" type="text" placeholder="<?php _e("Search for address...", 'acf'); ?>" value="<?php echo $fieldAddress; ?>" />
             </div>
 
 
             <div class="interactive-map__canvas">
-                <div class="map-tools map-tools--delete">
-                    <a href="#" class="map-tools__button" data-type="delete">Delete</a>
-                </div>
+                <a href="#" class="interactive-map__button interactive-map__button--delete">Delete</a>
+                <a href="#" class="interactive-map__button interactive-map__button--search">Search</a>
 
                 <div class="map"></div>
             </div>
