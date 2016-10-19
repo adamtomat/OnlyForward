@@ -100,6 +100,11 @@
                     var lat = place.geometry.location.lat();
                     var lng = place.geometry.location.lng();
 
+                    // Stop multiple info windows from appearing on the map
+                    if (_this.infoWindow) {
+                        _this.infoWindow.close();
+                    }
+
                     _this.addInfoWindow(lat, lng, title);
 
                     if ('viewport' in place.geometry) {
