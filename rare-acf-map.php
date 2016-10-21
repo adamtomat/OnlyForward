@@ -13,4 +13,4 @@ if (!class_exists('Rareloop\RareMap')) {
     $autoloader('Rareloop\\', __DIR__ . '/src/Rareloop/');
 }
 
-$rareMap = new \Rareloop\RareMap();
+$rareMap = new \Rareloop\InteractiveMap();

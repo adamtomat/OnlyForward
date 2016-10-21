@@ -5,7 +5,7 @@ namespace Rareloop;
 /**
 * This is a high level class that knows about all the overall functionality and glues other bits together
 */
-class RareMap
+class InteractiveMap
 {
 
     public function __construct()
@@ -22,6 +22,6 @@ class RareMap
 
     public function includeFieldType()
     {
-        $field = new AcfMapField($this->settings);
+        $field = new AcfField($this->settings);
     }
 }

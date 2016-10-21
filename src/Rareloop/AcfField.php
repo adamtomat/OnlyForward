@@ -4,7 +4,7 @@ namespace Rareloop;
 
 use acf_field;
 
-class AcfMapField extends acf_field
+class AcfField extends acf_field
 {
     public function __construct(array $settings)
     {
@@ -19,9 +19,17 @@ class AcfMapField extends acf_field
 
         // defaults (array) Array of default settings which are merged into the field object. These are used later in settings
         $this->defaults = [
-            'centerLat' => -37.81411,
-            'centerLng' => 144.96328,
-            'zoom' => 14,
+            'center_lat' => '',
+            'center_lng' => '',
+            'zoom' => '',
+            'max_zoom' => '',
+        ];
+
+        $this->defaultValues = [
+            'center_lat' => '51.508742',
+            'center_lng' => '-2.109375',
+            'zoom' => '2',
+            'max_zoom' => '14',
         ];
 
         // settings (array) Store plugin settings (url, path, version) as a reference for later use with assets
@@ -54,9 +62,13 @@ class AcfMapField extends acf_field
     */
     public function render_field($field)
     {
-        // echo '<pre>';
-        //     print_r($field);
-        // echo '</pre>';
+        // Use default options if the field doesn't have a value
+        foreach ($this->defaultValues as $key => $value) {
+            if (empty($field[$key])) {
+                $field[$key] = $value;
+            }
+        }
+
         $data = $field['value'];
 
         $geoJSON = !empty($data['geoJSON']) ? $data['geoJSON'] : null;
@@ -84,7 +96,7 @@ class AcfMapField extends acf_field
                 <a href="#" class="interactive-map__button interactive-map__button--delete">Delete</a>
                 <a href="#" class="interactive-map__button interactive-map__button--search">Search</a>
 
-                <div class="map"></div>
+                <div class="map" data-lat="<?php echo $field['center_lat']; ?>" data-lng="<?php echo $field['center_lng']; ?>" data-zoom="<?php echo $field['zoom']; ?>"  data-max-zoom="<?php echo $field['max_zoom']; ?>"></div>
             </div>
         </div>
         <?php
@@ -111,7 +123,7 @@ class AcfMapField extends acf_field
             'type' => 'text',
             'name' => 'center_lat',
             'prepend' => 'lat',
-            'placeholder' => $this->defaults['centerLat'],
+            'placeholder' => $this->defaultValues['center_lng'],
         ]);
 
         // centerLng
@@ -121,7 +133,7 @@ class AcfMapField extends acf_field
             'type' => 'text',
             'name' => 'center_lng',
             'prepend' => 'lng',
-            'placeholder' => $this->defaults['centerLng'],
+            'placeholder' => $this->defaultValues['center_lat'],
             'wrapper' => [
                 'data-append' => 'center_lat',
             ],
@@ -133,7 +145,16 @@ class AcfMapField extends acf_field
             'instructions' => __('Set the initial zoom level', 'acf'),
             'type' => 'text',
             'name' => 'zoom',
-            'placeholder' => $this->defaults['zoom'],
+            'placeholder' => $this->defaultValues['zoom'],
+        ]);
+
+        // max zoom
+        acf_render_field_setting($field, [
+            'label' => __('Maximum Zoom', 'acf'),
+            'instructions' => __('Set the maximum zoom level', 'acf'),
+            'type' => 'text',
+            'name' => 'max_zoom',
+            'placeholder' => $this->defaultValues['max_zoom'],
         ]);
     }
 
