@@ -375,11 +375,20 @@
 
         this.searchField = this.surface.find('.interactive-map__search');
 
-        this.map = new google.maps.Map(this.surface.find('.map')[0], {
-            center: L.latLng(-37.81411, 144.96328),
-            zoom: 8,
+        this.mapElement = this.surface.find('.map');
+
+        var lat = this.mapElement.data('lat');
+        var lng = this.mapElement.data('lng');
+        var zoom = this.mapElement.data('zoom');
+        var maxZoom = this.mapElement.data('max-zoom');
+
+        this.maxInitialZoom = 9;
+
+        this.map = new google.maps.Map(this.mapElement[0], {
+            center: L.latLng(lat, lng),
+            zoom: zoom,
             mapTypeControl: false,
-            maxZoom: 14,
+            maxZoom: maxZoom,
             streetViewControl: false,
         });
 
@@ -433,6 +442,7 @@
         var position = JSON.parse(positionJSON);
 
         var shapeOptions = {};
+        var bounds;
 
         if (this.currentShapeType === 'polygon') {
             // Grab the shape options from the drawingManager and add the map & path info to it
@@ -443,11 +453,54 @@
 
             // Draw the polygon on the map
             this.shape = new google.maps.Polygon(shapeOptions);
+
+            // Create new bounds
+            bounds = new google.maps.LatLngBounds();
+
+            // Add each point of the polygon to the bounds
+            $.each(position, function (index, item) {
+                bounds.extend(new google.maps.LatLng(item.lat, item.lng));
+            });
         } else if (this.currentShapeType === 'marker') {
             this.addMarker(position);
+
+            // Create bounds for the marker
+            var latLng = new google.maps.LatLng(position.lat, position.lng);
+            bounds = new google.maps.LatLngBounds(latLng);
         }
 
+        this.centerMapToMarkerOnLoad(bounds);
+
         this.showDeleteTools();
+    };
+
+    /**
+     * Centers the map to a marker on load
+     * Because we only have 1 marker on the map, google's 'fitBounds()' zooms in way too much.
+     * So we listen for the first zoom and cap it to 9.
+     *
+     * Used the technique from this post: http://stackoverflow.com/a/2990316/405529
+     * @param  {object} bounds LatLngBounds
+     */
+    InteractiveMap.prototype.centerMapToMarkerOnLoad = function(bounds) {
+        var _this = this;
+        var zoomChangeBoundsListener;
+
+        // This is needed to set the zoom after fitbounds,
+        google.maps.event.addListener(this.map, 'zoom_changed', function () {
+            zoomChangeBoundsListener = google.maps.event.addListener(_this.map, 'bounds_changed', function (event) {
+                if (this.getZoom() > _this.maxInitialZoom && this.initialZoom == true) {
+
+                    this.setZoom(_this.maxInitialZoom);
+                    this.initialZoom = false;
+                }
+
+                google.maps.event.removeListener(zoomChangeBoundsListener);
+            });
+        });
+
+        this.map.initialZoom = true;
+        this.map.fitBounds(bounds);
     };
 
     /**
