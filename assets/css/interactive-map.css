@@ -95,28 +95,6 @@
     background-image: url('../images/search-active.png');
 }
 
-// .interactive-map__button[data-type="polygon"]:before {
-//     top: 50%;
-
-//     width: 26px;
-//     height: 26px;
-//     margin-top: -13px;
-//     margin-left: -13px;
-
-//     background-image: url('../images/polygon.png');
-// }
-
-// .interactive-map__button[data-type="marker"]:before {
-//     top: 50%;
-
-//     width: 12px;
-//     height: 20px;
-//     margin-top: -10px;
-//     margin-left: -6px;
-
-//     background-image: url('../images/marker.png');
-// }
-
 .info-window {
     max-width: 220px;
     padding-left: 15px;
@@ -143,6 +121,7 @@
     transition: background 50ms linear;
 }
 
+.info-window__button:focus,
 .info-window__button:hover {
     background: #2d71a5;
     color: white;
