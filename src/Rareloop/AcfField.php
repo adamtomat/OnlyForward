@@ -69,13 +69,13 @@ class AcfField extends acf_field
             }
         }
 
-        $data = $field['value'];
+        $value = $this->migrateFieldValue($field['value']);
 
-        $geoJSON = !empty($data['geoJSON']) ? $data['geoJSON'] : null;
-        $type = !empty($data['type']) ? $data['type'] : null;
+        $geoJSON = !empty($value['geoJSON']) ? $value['geoJSON'] : null;
+        $type = !empty($value['type']) ? $value['type'] : null;
 
         $fieldName = esc_attr($field['name']);
-        $fieldAddress = !empty($data['address']) ? $data['address'] : null;
+        $fieldAddress = !empty($value['address']) ? $value['address'] : null;
 
         /*
         *  Create a simple text input using the 'font_size' setting.
@@ -198,5 +198,46 @@ class AcfField extends acf_field
         </script>
 
         <?php
+    }
+
+    /*
+    *  format_value()
+    *
+    *  This filter is appied to the $value after it is loaded from the db and before it is returned to the template
+    *
+    *  @type    filter
+    *  @since   3.6
+    *  @date    23/01/13
+    *
+    *  @param   $value (mixed) the value which was loaded from the database
+    *  @param   $post_id (mixed) the $post_id from which the value was loaded
+    *  @param   $field (array) the field array holding all the field options
+    *
+    *  @return  $value (mixed) the modified value
+    */
+    public function format_value($value, $post_id, $field)
+    {
+        return $this->migrateFieldValue($value);
+    }
+
+    /**
+     * Migrate the Google Map field to our field. Convert the lat and lng fields to a geoJSON field
+     * which has the lat/lng encoded in json
+     * @param $value (mixed) the value which was loaded from the database
+     * @return  $value (mixed) the modified value
+     */
+    protected function migrateFieldValue($value)
+    {
+        if (!isset($value['geoJSON']) && isset($value['lat']) && isset($value['lng'])) {
+            $geoJSON = [
+                'lat' => (float) $value['lat'],
+                'lng' => (float) $value['lng'],
+            ];
+
+            $value['geoJSON'] = json_encode($geoJSON);
+            $value['type'] = 'marker';
+        }
+
+        return $value;
     }
 }
