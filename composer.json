@@ -1,5 +1,5 @@
 {
-    "name": "rareloop/wp-acf-map-drawing",
+    "name": "rareloop/acf-interactive-map",
     "description": "WordPress plugin to allow drawing on a map and saving to acf",
     "type": "wordpress-plugin",
     "authors": [
