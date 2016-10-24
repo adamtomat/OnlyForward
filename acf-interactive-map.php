@@ -13,4 +13,9 @@ if (!class_exists('Rareloop\RareMap')) {
     $autoloader('Rareloop\\', __DIR__ . '/src/Rareloop/');
 }
 
-$rareMap = new \Rareloop\InteractiveMap();
+$settings = [
+    'path' => plugin_dir_url(__FILE__),
+    'url' => plugin_dir_url(__FILE__),
+];
+
+$rareMap = new \Rareloop\InteractiveMap($settings);

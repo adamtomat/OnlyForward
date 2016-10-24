@@ -40,8 +40,8 @@ class AcfField extends acf_field
 
         wp_enqueue_style('leaflet', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.css');
 
-        wp_enqueue_script('acf-input-test', plugins_url('wp-acf-map-drawing/assets/js/interactive-map.js'), ['jquery'], false, true);
-        wp_enqueue_style('acf-input-test', plugins_url('wp-acf-map-drawing/assets/css/interactive-map.css'));
+        wp_enqueue_script('acf-input-test', $settings['url'].'assets/js/interactive-map.js', ['jquery'], false, true);
+        wp_enqueue_style('acf-input-test', $settings['url'].'assets/css/interactive-map.css');
 
         parent::__construct();
     }

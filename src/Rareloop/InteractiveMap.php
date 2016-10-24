@@ -8,14 +8,14 @@ namespace Rareloop;
 class InteractiveMap
 {
 
-    public function __construct()
+    public function __construct(array $settings = [])
     {
-        $this->settings = [
+        $this->settings = array_merge([
             'version' => '1.0.0',
             'url' => plugin_dir_url(__FILE__),
             'path' => plugin_dir_path(__FILE__),
             'google_api_key' => 'test',
-        ];
+        ], $settings);
 
         add_action('acf/include_field_types', [$this, 'includeFieldType']);
     }
