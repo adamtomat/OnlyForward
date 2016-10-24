@@ -1,6 +1,6 @@
 <?php
 /*
-Plugin Name: WP ACF Map Markers
+Plugin Name: ACF Interactive Map
 Description: ACF plugin that lets you draw on a map
 Version: 1.0.0
 Author: Rareloop
