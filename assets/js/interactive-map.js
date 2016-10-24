@@ -132,14 +132,14 @@
             });
         });
 
-        // this.surface.find('.search').on('blur', function (event) {
-        //     // Don't hide the results if we clicked on a prediction.
-        //     if ($(event.relatedTarget).hasClass('prediction')) {
-        //         return;
-        //     }
+        this.surface.find('.search').on('blur', function (event) {
+            // Don't hide the results if we clicked on a prediction.
+            if ($(event.relatedTarget).hasClass('prediction')) {
+                return;
+            }
 
-        //     _this.hideResults();
-        // });
+            _this.hideResults();
+        });
 
         this.surface.find('.search').on('keyup', function (event) {
             var validKeys = {
