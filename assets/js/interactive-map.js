@@ -778,8 +778,10 @@
     *  @param   $el (jQuery selection) the jQuery element which contains the ACF fields
     *  @return  n/a
     */
-    // acf.add_action('ready append', function ($el) {
-    // });
+    if (!('acf' in window)) {
+        return;
+    }
+
     acf.fields.interactive_map = acf.field.extend({
         type: 'interactive_map',
 
