@@ -168,13 +168,45 @@
         this.surface.find('.search').on('keydown', function (event) {
             var searchInput = $(this);
 
-            if (_this.totalResults === 0) {
-                return;
-            }
-
             // Disable the 'enter' key from submitting the form
             if (event.keyCode === 13) {
+                var searchTerm = searchInput.val();
+                var latLng = searchTerm.split(',');
+
+                if (searchTerm.trim() === '' || latLng.length !== 2) {
+                    return false;
+                }
+
+                var lat = latLng[0].trim();
+                var lng = latLng[1].trim();
+
+                if($.isNumeric(lat) && $.isNumeric(lng)) {
+                    // Stop multiple info windows from appearing on the map
+                    if (_this.infoWindow) {
+                        _this.infoWindow.close();
+                    }
+
+                    // Chances are, lat/lng are strings. Parse them to floats otherwise Google Maps
+                    // falls over
+                    lat = parseFloat(lat);
+                    lng = parseFloat(lng);
+
+                    // Add the info window
+                    _this.addInfoWindow(lat, lng, searchTerm);
+
+                    // Hide the search bar
+                    _this.surface.trigger('hideSearch');
+
+                    // Re-position the map to the new info window
+                    var googleLatLng = new google.maps.LatLng(lat, lng);
+                    _this.map.fitBounds(new google.maps.LatLngBounds(googleLatLng));
+                }
+
                 return false;
+            }
+
+            if (_this.totalResults === 0) {
+                return;
             }
 
             var navigationKeys = {
