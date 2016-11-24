@@ -8,6 +8,9 @@ class AcfField extends acf_field
 {
     public function __construct(array $settings)
     {
+        // Validate the input on save (e.g. is required)
+        add_filter('acf/validate_value/type=interactive_map', [$this, 'validateOnSave'], 10, 4);
+
         // name (string) Single word, no spaces. Underscores allowed
         $this->name = 'interactive_map';
 
@@ -239,5 +242,27 @@ class AcfField extends acf_field
         }
 
         return $value;
+    }
+
+    /**
+     * Validate the input when the field is being saved.
+     * If the map is required, it must have a marker (polygon or pin) and a type
+     * @param  $valid See acf_validation::validate_value()
+     * @param  $value See acf_validation::validate_value()
+     * @param  $field See acf_validation::validate_value()
+     * @param  $input See acf_validation::validate_value()
+     * @return        See acf_validation::validate_value()
+     */
+    protected function validateOnSave($valid, $value, $field, $input)
+    {
+        if (!$field['required']) {
+            return $valid;
+        }
+
+        if (empty($value) || empty($value['geoJSON']) || empty($value['type'])) {
+            return false;
+        }
+
+        return $valid;
     }
 }
