@@ -1,12 +1,8 @@
 {
-    "name": "rareloop/acf-interactive-map",
-    "description": "WordPress plugin to allow drawing on a map and saving to acf",
+    "name": "adamtomat/only-forward",
+    "description": "WordPress plugin that stops you from editing posts before they are published",
     "type": "wordpress-plugin",
     "authors": [
-        {
-            "name": "Joe Lambert",
-            "email": "joe@rareloop.com"
-        },
         {
             "name": "Adam Tomat",
             "email": "adam.tomat@rareloop.com"
@@ -17,7 +13,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Rareloop\\": "src/Rareloop"
+            "App\\": "src/App"
         }
     },
     "minimum-stability": "stable"

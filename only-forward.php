@@ -8,9 +8,9 @@ Author URI: http://www.rareloop.com
 */
 
 // If we haven't loaded this plugin from Composer we need to add our own autoloader
-if (!class_exists('Rareloop\RareMap')) {
+if (!class_exists('App\OnlyForward')) {
     $autoloader = require_once('autoload.php');
-    $autoloader('Rareloop\\', __DIR__ . '/src/Rareloop/');
+    $autoloader('App\\', __DIR__ . '/src/App/');
 }
 
 $settings = [
@@ -18,4 +18,4 @@ $settings = [
     'url' => plugin_dir_url(__FILE__),
 ];
 
-$rareMap = new \Rareloop\InteractiveMap($settings);
+$onlyForward = new \App\OnlyForward($settings);
